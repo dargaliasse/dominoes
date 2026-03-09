@@ -125,21 +125,38 @@ def dominoes():
         """
         Handle the computer's turn.
 
-        The computer checks each of its pieces and attempts to place them
-        legally on either side of the snake. If no legal move exists,
-        it draws from the stock.
+        The computer scores its pieces based on how often their numbers appear
+        in its hand and in the snake, then tries to play the highest-scoring
+        legal piece. If no legal move exists, it draws from the stock.
         """
         print("Status: Computer is about to make a move. Press Enter to continue...")
         input()
 
-        for i, piece in enumerate(cpu_pieces):
+        pieces_values = {}
+        number_list = []
 
-            if legal_move(i + 1, piece, gaming_board):
-                cpu_pieces.pop(i)
+        for piece in cpu_pieces + gaming_board:
+            number_list.append(piece[0])
+            number_list.append(piece[1])
+
+        for number in number_list:
+            pieces_values[number] = pieces_values.get(number, 0) + 1
+
+        scored_pieces = []
+
+        for piece in cpu_pieces:
+            score = pieces_values[piece[0]] + pieces_values[piece[1]]
+            scored_pieces.append([score, piece])
+
+        scored_pieces.sort(reverse=True)
+
+        for score, piece in scored_pieces:
+            if legal_move(1, piece, gaming_board):
+                cpu_pieces.remove(piece)
                 return
 
-            if legal_move(-(i + 1), piece, gaming_board):
-                cpu_pieces.pop(i)
+            if legal_move(-1, piece, gaming_board):
+                cpu_pieces.remove(piece)
                 return
 
         if len(game_stock) > 0:
@@ -193,7 +210,6 @@ def dominoes():
             print(f"{i}:{piece}")
         print()
 
-        # Win conditions
         if len(player_s) == 0:
             print("Status: The game is over. You won!")
             break
@@ -206,7 +222,6 @@ def dominoes():
             print("Status: The game is over. It's a draw!")
             break
 
-        # Turn switching
         if current_turn == "player":
             turn(stock_s, player_s, gaming_board)
             current_turn = "computer"
