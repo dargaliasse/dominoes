@@ -1,1 +1,218 @@
+import random
 
+
+def dominoes():
+    """Main function that runs the dominoes game loop."""
+
+    def game_generator():
+        """
+        Generate and distribute domino pieces.
+
+        Creates the full domino set (0-6), shuffles it, distributes pieces to
+        the stock, player, and computer, and determines who starts based on
+        the highest double.
+        """
+        while True:
+            dominoes_set = []
+
+            for i in range(7):
+                for j in range(i, 7):
+                    dominoes_set.append([i, j])
+
+            random.shuffle(dominoes_set)
+
+            stock_s = dominoes_set[:14]
+            player_s = dominoes_set[14:21]
+            cpu_s = dominoes_set[21:]
+
+            highest_double = [-1, -1]
+            owner = None
+
+            for player, hand in [("player", player_s), ("computer", cpu_s)]:
+                for d in hand:
+                    if d[0] == d[1] and d[0] > highest_double[0]:
+                        highest_double = d
+                        owner = player
+
+            if owner is not None:
+                return highest_double, owner, stock_s, player_s, cpu_s
+
+    def gaming_board_print(gaming_board):
+        """
+        Return a string representation of the domino snake.
+
+        If the snake is longer than 6 pieces, only the first three and last
+        three pieces are displayed with "..." in between.
+        """
+        if len(gaming_board) <= 6:
+            return "".join(str(piece) for piece in gaming_board)
+
+        first_part = "".join(str(piece) for piece in gaming_board[:3])
+        last_part = "".join(str(piece) for piece in gaming_board[-3:])
+        return first_part + "..." + last_part
+
+    def legal_move(user_choice, piece, gaming_board):
+        """
+        Attempt to place a domino piece on the board.
+
+        Positive values place the piece on the right side of the snake.
+        Negative values place the piece on the left side.
+
+        Returns True if the move is valid and performed, otherwise False.
+        """
+        if user_choice > 0:
+            number_to_match = gaming_board[-1][-1]
+
+            if piece[0] == number_to_match:
+                gaming_board.append(piece)
+                return True
+
+            if piece[1] == number_to_match:
+                gaming_board.append(piece[::-1])
+                return True
+
+        elif user_choice < 0:
+            number_to_match = gaming_board[0][0]
+
+            if piece[1] == number_to_match:
+                gaming_board.insert(0, piece)
+                return True
+
+            if piece[0] == number_to_match:
+                gaming_board.insert(0, piece[::-1])
+                return True
+
+        return False
+
+    def turn(game_stock, player_pieces, gaming_board):
+        """
+        Handle the player's turn.
+
+        The player can:
+        - place a domino on the left or right side of the snake
+        - draw from the stock by entering 0
+        """
+        while True:
+            print("Status: It's your turn to make a move. Enter your command.")
+            user_input = input()
+
+            try:
+                player_input = int(user_input)
+            except ValueError:
+                print("Invalid input. Please try again.")
+                continue
+
+            if abs(player_input) > len(player_pieces):
+                print("Invalid input. Please try again.")
+                continue
+
+            if player_input == 0:
+                if len(game_stock) > 0:
+                    picked_piece = random.choice(game_stock)
+                    player_pieces.append(picked_piece)
+                    game_stock.remove(picked_piece)
+                break
+
+            piece = player_pieces[abs(player_input) - 1]
+
+            if legal_move(player_input, piece, gaming_board):
+                player_pieces.pop(abs(player_input) - 1)
+                break
+
+            print("Illegal move. Please try again.")
+
+    def computer_turn(game_stock, cpu_pieces, gaming_board):
+        """
+        Handle the computer's turn.
+
+        The computer checks each of its pieces and attempts to place them
+        legally on either side of the snake. If no legal move exists,
+        it draws from the stock.
+        """
+        print("Status: Computer is about to make a move. Press Enter to continue...")
+        input()
+
+        for i, piece in enumerate(cpu_pieces):
+
+            if legal_move(i + 1, piece, gaming_board):
+                cpu_pieces.pop(i)
+                return
+
+            if legal_move(-(i + 1), piece, gaming_board):
+                cpu_pieces.pop(i)
+                return
+
+        if len(game_stock) > 0:
+            picked_piece = random.choice(game_stock)
+            cpu_pieces.append(picked_piece)
+            game_stock.remove(picked_piece)
+
+    def draw_check(gaming_board):
+        """
+        Check if the game ends in a draw.
+
+        A draw occurs when the numbers at both ends of the snake are equal
+        and that number appears 8 times across the snake.
+        """
+        left_number = gaming_board[0][0]
+        right_number = gaming_board[-1][1]
+
+        if left_number != right_number:
+            return False
+
+        count = 0
+        for piece in gaming_board:
+            count += piece.count(left_number)
+
+        return count == 8
+
+    # Initialize the game
+    snake, owner, stock_s, player_s, cpu_s = game_generator()
+    gaming_board = [snake]
+
+    # Determine who plays first
+    if owner == "player":
+        player_s.remove(snake)
+        current_turn = "computer"
+    else:
+        cpu_s.remove(snake)
+        current_turn = "player"
+
+    # Main game loop
+    while True:
+        print("=" * 70)
+        print(f"Stock size: {len(stock_s)}")
+        print(f"Computer pieces: {len(cpu_s)}")
+        print()
+
+        print(gaming_board_print(gaming_board))
+        print()
+
+        print("Your pieces:")
+        for i, piece in enumerate(player_s, 1):
+            print(f"{i}:{piece}")
+        print()
+
+        # Win conditions
+        if len(player_s) == 0:
+            print("Status: The game is over. You won!")
+            break
+
+        if len(cpu_s) == 0:
+            print("Status: The game is over. The computer won!")
+            break
+
+        if draw_check(gaming_board):
+            print("Status: The game is over. It's a draw!")
+            break
+
+        # Turn switching
+        if current_turn == "player":
+            turn(stock_s, player_s, gaming_board)
+            current_turn = "computer"
+        else:
+            computer_turn(stock_s, cpu_s, gaming_board)
+            current_turn = "player"
+
+
+dominoes()
